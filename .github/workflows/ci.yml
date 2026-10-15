@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # The unit tests mock the database, so these values only have to exist:
+      # app/core/config.py refuses to start without them.
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          SECRET_KEY: ci-only-not-a-secret
+        run: python -m pytest tests/unit -q
+
+      - name: Build Docker image
+        run: docker build -t eap-backend .
